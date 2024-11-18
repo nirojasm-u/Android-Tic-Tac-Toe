@@ -33,7 +33,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun TicTacToeGame() {
     var board by remember { mutableStateOf(List(3) { MutableList(3) { "" } }) }
-    var currentPlayer by remember { mutableStateOf("X") }
+    var startingPlayer by remember { mutableStateOf("X") }
+    var currentPlayer by remember { mutableStateOf(startingPlayer) }
     var winner by remember { mutableStateOf<String?>(null) }
     var isGameOver by remember { mutableStateOf(false) }
 
@@ -69,9 +70,9 @@ fun TicTacToeGame() {
         ) {
             Text(
                 text = if (isGameOver) {
-                    winner?.let { "Winner: $it" } ?: "It's a draw!"
+                    winner?.let { "Ganador: $it" } ?: "Empate!"
                 } else {
-                    "Current Player: $currentPlayer"
+                    "Turno: $currentPlayer"
                 },
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
@@ -89,7 +90,7 @@ fun TicTacToeGame() {
             }
 
             Text(
-                text = "Human Wins: $humanWins | CPU Wins: $cpuWins | Ties: $ties",
+                text = "Jugador 1: $humanWins | CPU: $cpuWins | Empates: $ties",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 16.dp)
@@ -99,13 +100,14 @@ fun TicTacToeGame() {
                 Button(
                     onClick = {
                         board = List(3) { MutableList(3) { "" } }
-                        currentPlayer = "X"
+                        startingPlayer = if (startingPlayer == "X") "O" else "X"
+                        currentPlayer = startingPlayer
                         isGameOver = false
                         winner = null
                     },
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    Text("Restart")
+                    Text("Reiniciar")
                 }
             }
         }
