@@ -6,7 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +33,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicTacToeGame() {
     var board by remember { mutableStateOf(List(3) { MutableList(3) { "" } }) }
@@ -41,26 +45,76 @@ fun TicTacToeGame() {
     var humanWins by remember { mutableStateOf(0) }
     var cpuWins by remember { mutableStateOf(0) }
     var ties by remember { mutableStateOf(0) }
+    var difficulty by remember { mutableStateOf("Normal") }
+    var isMenuExpanded by remember { mutableStateOf(false) }
+
+    var showDifficultyDialog by remember { mutableStateOf(false) }
+    var showQuitDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(board) {
         winner = checkWinner(board)
         if (winner != null || board.flatten().all { it.isNotEmpty() }) {
             isGameOver = true
-            when (winner){
+            when (winner) {
                 "X" -> humanWins++
                 "O" -> cpuWins++
                 null -> ties++
             }
         } else if (currentPlayer == "O") {
-            val move = findBestMove(board)
+            val move = findBestMove(board, difficulty)
             if (move != null) {
-                board[move.first][move.second] = "O"
+                board = board.mapIndexed { r, rowValues ->
+                    rowValues.mapIndexed { c, cellValue ->
+                        if (r == move.first && c == move.second) "O" else cellValue
+                    }.toMutableList()
+                }
                 currentPlayer = "X"
             }
         }
     }
 
-    Scaffold {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Tic Tac Toe") },
+                actions = {
+                    IconButton(onClick = { isMenuExpanded = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                    }
+                    DropdownMenu(
+                        expanded = isMenuExpanded,
+                        onDismissRequest = { isMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Nuevo Juego") },
+                            onClick = {
+                                board = List(3) { MutableList(3) { "" } }
+                                startingPlayer = "X"
+                                currentPlayer = startingPlayer
+                                isGameOver = false
+                                winner = null
+                                isMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Establecer Dificultad") },
+                            onClick = {
+                                isMenuExpanded = false
+                                showDifficultyDialog = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Salir") },
+                            onClick = {
+                                isMenuExpanded = false
+                                showQuitDialog = true
+                            }
+                        )
+                    }
+                }
+            )
+        }
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -78,6 +132,7 @@ fun TicTacToeGame() {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(16.dp)
             )
+
             Board(board, isGameOver) { row, col ->
                 if (!isGameOver && board[row][col].isEmpty() && currentPlayer == "X") {
                     board = board.mapIndexed { r, rowValues ->
@@ -90,7 +145,7 @@ fun TicTacToeGame() {
             }
 
             Text(
-                text = "Jugador 1: $humanWins | CPU: $cpuWins | Empates: $ties",
+                text = "Jugador: $humanWins | CPU: $cpuWins | Empates: $ties",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 16.dp)
@@ -107,12 +162,32 @@ fun TicTacToeGame() {
                     },
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    Text("Reiniciar")
+                    Text("Reiniciar Juego")
                 }
             }
         }
     }
+
+    if (showDifficultyDialog) {
+        DifficultyDialog(
+            onDismiss = { showDifficultyDialog = false },
+            onDifficultySelected = { selectedDifficulty ->
+                difficulty = selectedDifficulty
+                showDifficultyDialog = false
+            }
+        )
+    }
+
+    // Show the Quit Dialog if needed
+    if (showQuitDialog) {
+        QuitDialog(
+            onDismiss = { showQuitDialog = false },
+            onConfirmQuit = { System.exit(0) }
+        )
+    }
+
 }
+
 
 @Composable
 fun Board(board: List<List<String>>, isGameOver: Boolean, onCellClick: (Int, Int) -> Unit) {
@@ -180,7 +255,25 @@ fun checkWinner(board: List<List<String>>): String? {
     return null
 }
 
-fun findBestMove(board: List<MutableList<String>>): Pair<Int, Int>? {
+fun findBestMove(board: List<MutableList<String>>, difficulty: String): Pair<Int, Int>? {
+    return when (difficulty){
+        "Fácil" -> findRandomMove(board)
+        "Normal" -> if ((0..1).random() == 0) findRandomMove(board) else minimaxMove(board)
+        "Difícil" -> minimaxMove(board)
+        else -> minimaxMove(board)
+    }
+}
+
+fun findRandomMove(board: List<MutableList<String>>): Pair<Int, Int>? {
+    val emptyCells = board.flatMapIndexed { row, rowValues ->
+        rowValues.mapIndexedNotNull { col, cellValue ->
+            if (cellValue.isEmpty()) row to col else null
+        }
+    }
+    return if (emptyCells.isNotEmpty()) emptyCells.random() else null
+}
+
+fun minimaxMove(board: List<MutableList<String>>): Pair<Int, Int>? {
     var bestMove: Pair<Int, Int>? = null
     var bestScore = Int.MIN_VALUE
     for (row in board.indices) {
@@ -233,3 +326,64 @@ fun minimax(board: List<MutableList<String>>, depth: Int, isMaximizing: Boolean)
         return minEval
     }
 }
+
+@Composable
+fun DifficultyDialog(onDismiss: () -> Unit, onDifficultySelected: (String) -> Unit) {
+    var selectedDifficulty by remember { mutableStateOf("Normal") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Establecer Dificultad") },
+        text = {
+            Column {
+                listOf("Fácil", "Normal", "Difícil").forEach { difficulty ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = (difficulty == selectedDifficulty),
+                                onClick = { selectedDifficulty = difficulty }
+                            ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (difficulty == selectedDifficulty),
+                            onClick = { selectedDifficulty = difficulty }
+                        )
+                        Text(text = difficulty, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onDifficultySelected(selectedDifficulty) }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+fun QuitDialog(onDismiss: () -> Unit, onConfirmQuit: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Salir") },
+        text = { Text("Está seguro de que desea salir?") },
+        confirmButton = {
+            Button(onClick = onConfirmQuit) {
+                Text("Salir")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
