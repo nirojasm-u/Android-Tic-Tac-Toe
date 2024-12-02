@@ -20,6 +20,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import co.edu.unal.tictactoe.ui.theme.AndroidTicTacToeTutorial2Theme
+import android.media.MediaPlayer
+import androidx.compose.foundation.Image
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,6 +57,10 @@ fun TicTacToeGame() {
     var showDifficultyDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val mediaPlayerX = remember { MediaPlayer.create(context, R.raw.move_x) }
+    val mediaPlayerO = remember { MediaPlayer.create(context, R.raw.move_o) }
+
     LaunchedEffect(board) {
         winner = checkWinner(board)
         if (winner != null || board.flatten().all { it.isNotEmpty() }) {
@@ -61,6 +71,7 @@ fun TicTacToeGame() {
                 null -> ties++
             }
         } else if (currentPlayer == "O") {
+            delay(1500L)
             val move = findBestMove(board, difficulty)
             if (move != null) {
                 board = board.mapIndexed { r, rowValues ->
@@ -68,8 +79,17 @@ fun TicTacToeGame() {
                         if (r == move.first && c == move.second) "O" else cellValue
                     }.toMutableList()
                 }
+                mediaPlayerO.start()
                 currentPlayer = "X"
             }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            // Release MediaPlayers when composable is disposed
+            mediaPlayerX.release()
+            mediaPlayerO.release()
         }
     }
 
@@ -140,6 +160,7 @@ fun TicTacToeGame() {
                             if (r == row && c == col) "X" else cellValue
                         }.toMutableList()
                     }
+                    mediaPlayerX.start()
                     currentPlayer = "O"
                 }
             }
@@ -214,12 +235,19 @@ fun Board(board: List<List<String>>, isGameOver: Boolean, onCellClick: (Int, Int
                                     .padding(8.dp),
                                 contentAlignment = Alignment.Center // Center content inside the surface
                             ) {
-                                Text(
-                                    text = cellValue,
-                                    fontSize = 36.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.Black
-                                )
+                                when(board[row][col]){
+                                    "X" -> Image(
+                                        painter = painterResource(id = R.drawable.x_image),
+                                        contentDescription = "X",
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    "O" -> Image(
+                                        painter = painterResource(id = R.drawable.o_image),
+                                        contentDescription = "O",
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    else -> Spacer(modifier = Modifier.fillMaxSize())
+                                }
                             }
                         }
                     }
