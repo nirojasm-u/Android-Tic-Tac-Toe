@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import co.edu.unal.tictactoe.ui.theme.AndroidTicTacToeTutorial2Theme
 import android.media.MediaPlayer
@@ -25,6 +26,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.Image
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 
 class MainActivity : ComponentActivity() {
@@ -60,6 +62,13 @@ fun TicTacToeGame() {
     val context = LocalContext.current
     val mediaPlayerX = remember { MediaPlayer.create(context, R.raw.move_x) }
     val mediaPlayerO = remember { MediaPlayer.create(context, R.raw.move_o) }
+
+    val configuration = LocalConfiguration.current
+    val cellSize = if (configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
+        80.dp
+    } else{
+        100.dp
+    }
 
     LaunchedEffect(board) {
         winner = checkWinner(board)
@@ -153,7 +162,7 @@ fun TicTacToeGame() {
                 modifier = Modifier.padding(16.dp)
             )
 
-            Board(board, isGameOver) { row, col ->
+            Board(board = board, isGameOver = isGameOver, cellSize = cellSize) { row, col ->
                 if (!isGameOver && board[row][col].isEmpty() && currentPlayer == "X") {
                     board = board.mapIndexed { r, rowValues ->
                         rowValues.mapIndexed { c, cellValue ->
@@ -211,14 +220,14 @@ fun TicTacToeGame() {
 
 
 @Composable
-fun Board(board: List<List<String>>, isGameOver: Boolean, onCellClick: (Int, Int) -> Unit) {
+fun Board(board: List<List<String>>, isGameOver: Boolean, cellSize: Dp, onCellClick: (Int, Int) -> Unit) {
     Column {
         board.forEachIndexed { row, rowValues ->
             Row(horizontalArrangement = Arrangement.Center) {
                 rowValues.forEachIndexed { col, cellValue ->
                     Box(
                         modifier = Modifier
-                            .size(100.dp)
+                            .size(cellSize)
                             .padding(4.dp)
                             .clickable(enabled = cellValue.isEmpty() && !isGameOver) {
                                 onCellClick(row, col)
