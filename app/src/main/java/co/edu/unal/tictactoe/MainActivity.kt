@@ -28,6 +28,8 @@ import kotlinx.coroutines.delay
 import androidx.compose.foundation.Image
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
+import android.content.Context
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,22 +52,25 @@ fun TicTacToeGame() {
     var winner by remember { mutableStateOf<String?>(null) }
     var isGameOver by remember { mutableStateOf(false) }
 
-    var humanWins by remember { mutableStateOf(0) }
-    var cpuWins by remember { mutableStateOf(0) }
-    var ties by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+    val preferences = context.getSharedPreferences("TicTacToePrefs", Context.MODE_PRIVATE)
+    val editor = preferences.edit()
+
+    var humanWins by remember { mutableStateOf(preferences.getInt("humanWins", 0)) }
+    var cpuWins by remember { mutableStateOf(preferences.getInt("cpuWins", 0)) }
+    var ties by remember { mutableStateOf(preferences.getInt("ties", 0)) }
     var difficulty by remember { mutableStateOf("Normal") }
     var isMenuExpanded by remember { mutableStateOf(false) }
 
     var showDifficultyDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
     val mediaPlayerX = remember { MediaPlayer.create(context, R.raw.move_x) }
     val mediaPlayerO = remember { MediaPlayer.create(context, R.raw.move_o) }
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val cellSize = if (configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
+    val cellSize = if (isLandscape) {
         80.dp
     } else{
         100.dp
@@ -76,9 +81,18 @@ fun TicTacToeGame() {
         if (winner != null || board.flatten().all { it.isNotEmpty() }) {
             isGameOver = true
             when (winner) {
-                "X" -> humanWins++
-                "O" -> cpuWins++
-                null -> ties++
+                "X" -> {
+                    humanWins++
+                    editor.putInt("humanWins", humanWins).apply()
+                }
+                "O" -> {
+                    cpuWins++
+                    editor.putInt("cpuWins", cpuWins).apply()
+                }
+                null -> {
+                    ties++
+                    editor.putInt("ties", ties).apply()
+                }
             }
         } else if (currentPlayer == "O") {
             delay(1500L)
@@ -155,7 +169,9 @@ fun TicTacToeGame() {
             ) {
                 // Scores Column
                 Column(
-                    modifier = Modifier.weight(1f).padding(16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
