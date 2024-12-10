@@ -64,6 +64,7 @@ fun TicTacToeGame() {
     val mediaPlayerO = remember { MediaPlayer.create(context, R.raw.move_o) }
 
     val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val cellSize = if (configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
         80.dp
     } else{
@@ -143,57 +144,75 @@ fun TicTacToeGame() {
                 }
             )
         }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(it),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = if (isGameOver) {
-                    winner?.let { "Ganador: $it" } ?: "Empate!"
-                } else {
-                    "Turno: $currentPlayer"
-                },
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
-            )
+    ) { innerPadding ->
+        if (isLandscape) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Scores Column
+                Column(
+                    modifier = Modifier.weight(1f).padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("Jugador: $humanWins", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("CPU: $cpuWins", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Empates: $ties", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
 
-            Board(board = board, isGameOver = isGameOver, cellSize = cellSize) { row, col ->
-                if (!isGameOver && board[row][col].isEmpty() && currentPlayer == "X") {
-                    board = board.mapIndexed { r, rowValues ->
-                        rowValues.mapIndexed { c, cellValue ->
-                            if (r == row && c == col) "X" else cellValue
-                        }.toMutableList()
+                Column(
+                    modifier = Modifier
+                        .weight(1f) // Adjust weight to share space evenly
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    // Game Board
+                    Board(board = board, isGameOver = isGameOver, cellSize = cellSize) { row, col ->
+                        if (!isGameOver && board[row][col].isEmpty() && currentPlayer == "X") {
+                            board = board.mapIndexed { r, rowValues ->
+                                rowValues.mapIndexed { c, cellValue ->
+                                    if (r == row && c == col) "X" else cellValue
+                                }.toMutableList()
+                            }
+                            mediaPlayerX.start()
+                            currentPlayer = "O"
+                        }
                     }
-                    mediaPlayerX.start()
-                    currentPlayer = "O"
                 }
             }
-
-            Text(
-                text = "Jugador: $humanWins | CPU: $cpuWins | Empates: $ties",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-
-            if (isGameOver) {
-                Button(
-                    onClick = {
-                        board = List(3) { MutableList(3) { "" } }
-                        startingPlayer = if (startingPlayer == "X") "O" else "X"
-                        currentPlayer = startingPlayer
-                        isGameOver = false
-                        winner = null
-                    },
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text("Reiniciar Juego")
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Game Board
+                Board(board = board, isGameOver = isGameOver, cellSize = cellSize) { row, col ->
+                    if (!isGameOver && board[row][col].isEmpty() && currentPlayer == "X") {
+                        board = board.mapIndexed { r, rowValues ->
+                            rowValues.mapIndexed { c, cellValue ->
+                                if (r == row && c == col) "X" else cellValue
+                            }.toMutableList()
+                        }
+                        mediaPlayerX.start()
+                        currentPlayer = "O"
+                    }
                 }
+
+                // Scores below the board
+                Text(
+                    text = "Jugador: $humanWins | CPU: $cpuWins | Empates: $ties",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
         }
     }
